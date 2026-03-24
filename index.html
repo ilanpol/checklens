@@ -1091,9 +1091,11 @@ function handleImage(input) {
 function clearImage() {
   currentImage = null;
   currentResult = null;
+  bundleResults = [];
   document.getElementById('previewWrap').classList.remove('show');
   document.getElementById('resultCard').classList.remove('show');
   document.getElementById('loadingCard').classList.remove('show');
+  document.getElementById('bundleCard').classList.remove('show');
   hideError();
 }
 
@@ -1224,8 +1226,9 @@ async function analyzeCheck() {
     const validation = runValidation(parsed);
     currentResult = { data: parsed, validation, timestamp: new Date().toISOString() };
 
-    // Show result
+    // Show result (keep preview visible)
     document.getElementById('loadingCard').classList.remove('show');
+    document.getElementById('previewWrap').classList.add('show');
     renderResult(currentResult);
 
   } catch (err) {
@@ -1547,9 +1550,12 @@ function renderResult(r) {
       <div class="data-label">שיק מס׳</div>
       <div class="data-value mono">${d.cheque_number || '—'}</div>
     </div>
-    <div class="data-cell wide">
-      <div class="data-label">לפקודת</div>
-      <div class="data-value">${d.payee || '—'}</div>
+    <div class="data-cell wide" style="border: 1.5px solid var(--amber); background: #fffdf0;">
+      <div class="data-label" style="color: var(--amber)">⚠️ לפקודת — אמת מול השיק</div>
+      <input id="inlinePayee" 
+        style="width:100%;border:none;background:transparent;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--dark);outline:none;padding:2px 0"
+        value="${(d.payee || '').replace(/"/g, '&quot;')}"
+        placeholder="הקלד שם מוטב...">
     </div>
   `;
 
@@ -1704,7 +1710,8 @@ function openEditModal() {
   if (!currentResult) return;
   const d = currentResult.data;
 
-  document.getElementById('editPayee').value = d.payee || '';
+  const inlineField = document.getElementById('inlinePayee');
+  document.getElementById('editPayee').value = (inlineField ? inlineField.value : d.payee) || '';
   document.getElementById('editAmount').value = d.amount_digits || '';
   document.getElementById('editDate').value = d.date || '';
   document.getElementById('editDrawer').value = d.drawer_name || '';
@@ -1734,7 +1741,8 @@ function confirmAndSave() {
   if (!currentResult) return;
 
   // Apply manual corrections
-  currentResult.data.payee        = document.getElementById('editPayee').value.trim();
+  const inlineP = document.getElementById('inlinePayee');
+  currentResult.data.payee = (inlineP ? inlineP.value.trim() : document.getElementById('editPayee').value.trim());
   currentResult.data.amount_digits = document.getElementById('editAmount').value.trim().replace(/[,₪\s]/g,'');
   currentResult.data.date          = document.getElementById('editDate').value.trim();
   currentResult.data.drawer_name   = document.getElementById('editDrawer').value.trim();
