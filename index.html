@@ -643,6 +643,186 @@ body {
 /* Pages */
 .page { display: none; }
 .page.active { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── EDIT MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,27,42,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+
+.modal-sheet {
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  animation: slideUp 0.3s ease;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: var(--dark);
+}
+
+.modal-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.edit-field {
+  margin-bottom: 14px;
+}
+
+.edit-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--dark);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+.edit-input:focus { border-color: var(--blue); background: white; }
+.edit-input.highlight { border-color: var(--amber); background: #fffdf0; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btn-confirm {
+  flex: 1;
+  padding: 14px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  padding: 14px 20px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* confidence indicator */
+.conf-low  { color: var(--amber); font-size: 11px; margin-top: 4px; }
+.conf-high { color: var(--green); font-size: 11px; margin-top: 4px; }
+
+
+/* ── BUNDLE MODE ── */
+.mode-toggle {
+  display: flex;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 9px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.mode-btn.active {
+  background: var(--white);
+  color: var(--dark);
+  box-shadow: 0 1px 6px rgba(13,27,42,0.12);
+}
+
+/* Bundle results */
+.bundle-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: none;
+  animation: slideUp 0.4s ease;
+}
+.bundle-card.show { display: block; }
+
+.bundle-header {
+  padding: 14px 20px;
+  background: var(--dark);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bundle-title { font-size: 15px; font-weight: 900; }
+.bundle-total { font-family: var(--mono); font-size: 14px; color: #4db8ff; }
+
+.bundle-row {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bundle-row:last-child { border-bottom: none; }
+.bundle-row:active { background: var(--bg); }
+
+.br-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.br-drawer { font-size: 13px; font-weight: 700; color: var(--dark); }
+.br-amount { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--blue); }
+.br-meta { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
+.br-status { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+
+.bundle-actions {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+}
+
 </style>
 </head>
 <body>
@@ -674,12 +854,18 @@ body {
     <!-- Error -->
     <div class="error-banner" id="errorBanner"></div>
 
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeSingle" onclick="setMode('single')">📄 שיק יחיד</button>
+      <button class="mode-btn" id="modeBundle" onclick="setMode('bundle')">📦 חבילת שיקים</button>
+    </div>
+
     <!-- Upload Card -->
     <div class="upload-card" id="uploadCard">
       <div class="upload-area" onclick="document.getElementById('galleryInput').click()">
-        <span class="upload-icon">📄</span>
-        <div class="upload-title">בדיקת שיק</div>
-        <div class="upload-sub">צלם או בחר תמונת שיק<br>CamScanner מומלץ לדיוק מירבי</div>
+        <span class="upload-icon" id="uploadIcon">📄</span>
+        <div class="upload-title" id="uploadTitle">בדיקת שיק</div>
+        <div class="upload-sub" id="uploadSub">צלם או בחר תמונת שיק<br>CamScanner מומלץ לדיוק מירבי</div>
       </div>
       <div class="upload-actions">
         <button class="upload-btn" onclick="document.getElementById('cameraInput').click()">
@@ -755,10 +941,24 @@ body {
       </div>
 
       <div class="result-actions">
-        <button class="btn-action btn-primary" onclick="saveToHistory()">💾 שמור בהיסטוריה</button>
+        <button class="btn-action btn-primary" onclick="openEditModal()">✏️ אמת ושמור</button>
         <button class="btn-action btn-secondary" onclick="clearImage()">🔄 שיק חדש</button>
       </div>
 
+    </div>
+
+
+    <!-- Bundle Result -->
+    <div class="bundle-card" id="bundleCard">
+      <div class="bundle-header">
+        <div class="bundle-title" id="bundleTitle">📦 חבילת שיקים</div>
+        <div class="bundle-total" id="bundleTotal">₪0</div>
+      </div>
+      <div id="bundleRows"></div>
+      <div class="bundle-actions">
+        <button class="btn-action btn-primary" onclick="saveBundle()">💾 שמור חבילה</button>
+        <button class="btn-action btn-secondary" onclick="clearImage()">🔄 חבילה חדשה</button>
+      </div>
     </div>
 
   </div>
@@ -776,6 +976,42 @@ body {
     </div>
   </div>
 
+</div>
+
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet">
+    <div class="modal-title">✏️ אמת ותקן לפני שמירה</div>
+    <div class="modal-sub">בדוק את הנתונים שנקראו — תקן אם נדרש. שדות מסומנים דורשים תשומת לב.</div>
+
+    <div class="edit-field">
+      <div class="edit-label">שם מוטב (לפקודת)</div>
+      <input class="edit-input highlight" id="editPayee" type="text" placeholder="שם המוטב...">
+      <div class="conf-low" id="payeeConf">⚠️ כתב יד — אמת מול השיק</div>
+    </div>
+
+    <div class="edit-field">
+      <div class="edit-label">סכום</div>
+      <input class="edit-input" id="editAmount" type="text" placeholder="סכום בספרות...">
+      <div id="amountConf"></div>
+    </div>
+
+    <div class="edit-field">
+      <div class="edit-label">תאריך פירעון</div>
+      <input class="edit-input" id="editDate" type="text" placeholder="DD/MM/YYYY">
+    </div>
+
+    <div class="edit-field">
+      <div class="edit-label">שם מושך</div>
+      <input class="edit-input" id="editDrawer" type="text" placeholder="שם המושך...">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="confirmAndSave()">✅ אשר ושמור</button>
+      <button class="btn-cancel" onclick="closeEditModal()">ביטול</button>
+    </div>
+  </div>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -861,8 +1097,34 @@ function clearImage() {
   hideError();
 }
 
+// ─── MODE ───
+let currentMode = 'single';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeSingle').classList.toggle('active', mode === 'single');
+  document.getElementById('modeBundle').classList.toggle('active', mode === 'bundle');
+
+  if (mode === 'bundle') {
+    document.getElementById('uploadIcon').textContent = '📦';
+    document.getElementById('uploadTitle').textContent = 'חבילת שיקים';
+    document.getElementById('uploadSub').textContent = 'תמונה עם שיק אחד או יותר
+המערכת תזהה ותנתח כל שיק בנפרד';
+  } else {
+    document.getElementById('uploadIcon').textContent = '📄';
+    document.getElementById('uploadTitle').textContent = 'בדיקת שיק';
+    document.getElementById('uploadSub').textContent = 'צלם או בחר תמונת שיק\nCamScanner מומלץ לדיוק מירבי';
+  }
+
+  clearImage();
+}
+
 // ─── ANALYSIS ───
 async function analyzeCheck() {
+  if (currentMode === 'bundle') {
+    await analyzeBundleMode();
+    return;
+  }
   if (!currentImage) return;
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -972,6 +1234,186 @@ async function analyzeCheck() {
     document.getElementById('previewWrap').classList.add('show');
     showError('שגיאה בניתוח: ' + err.message);
   }
+}
+
+// ─── BUNDLE ANALYSIS ───
+let bundleResults = [];
+
+async function analyzeBundleMode() {
+  if (!currentImage) return;
+  const apiKey = getApiKey();
+  if (!apiKey) { showError('יש להגדיר מפתח API תחילה'); return; }
+
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('bundleCard').classList.remove('show');
+  document.getElementById('loadingCard').classList.add('show');
+  hideError();
+  animateSteps();
+
+  try {
+    const b64 = currentImage.split(',')[1];
+    const mediaType = currentImage.split(';')[0].split(':')[1];
+
+    // Step 1: Count checks
+    const countPrompt = `בתמונה זו יש שיק אחד או יותר. ספור כמה שיקים נפרדים יש בתמונה.
+ענה ב-JSON בלבד: {"count": <מספר>, "layout": "single|vertical|horizontal"}`;
+
+    const countResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'content-type':'application/json','anthropic-version':'2023-06-01','x-api-key':apiKey,'anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model: 'claude-opus-4-5', max_tokens: 100,
+        messages: [{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
+          {type:'text',text:countPrompt}
+        ]}]
+      })
+    });
+
+    const countData = await countResp.json();
+    let countRaw = countData.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const countResult = JSON.parse(countRaw);
+    const numChecks = countResult.count || 1;
+
+    // Step 2: Analyze each check
+    bundleResults = [];
+    for (let i = 1; i <= numChecks; i++) {
+      const checkPrompt = buildCheckPrompt(i, numChecks);
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'content-type':'application/json','anthropic-version':'2023-06-01','x-api-key':apiKey,'anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({
+          model: 'claude-opus-4-5', max_tokens: 1400,
+          messages: [{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
+            {type:'text',text:checkPrompt}
+          ]}]
+        })
+      });
+
+      const d = await resp.json();
+      let raw = d.content[0].text.trim().replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(raw);
+      const validation = runValidation(parsed);
+      bundleResults.push({data:parsed, validation, timestamp:new Date().toISOString(), index:i});
+    }
+
+    document.getElementById('loadingCard').classList.remove('show');
+    renderBundle(bundleResults);
+
+  } catch (err) {
+    document.getElementById('loadingCard').classList.remove('show');
+    document.getElementById('previewWrap').classList.add('show');
+    showError('שגיאה בניתוח חבילה: ' + err.message);
+  }
+}
+
+function buildCheckPrompt(index, total) {
+  const pos = total > 1 ? `בתמונה יש ${total} שיקים. נתח את שיק מספר ${index} מלמעלה למטה.` : 'נתח את השיק בתמונה.';
+  return `אתה מומחה לבדיקת שטרות ישראליים.
+${pos}
+תאריך היום: ${formatDate(TODAY)}. מקסימום: ${formatDate(new Date(TODAY.getTime()+120*24*60*60*1000))}.
+
+== פרטי מושך — חשוב מאוד ==
+פרטי המושך (שם החברה, ח.פ., כתובת, טלפון) מודפסים בפינה הימנית העליונה של השיק.
+חפש שם חברה, ח"פ או ח.פ. עם 9 ספרות, כתובת, וטלפון — כולם מודפסים שם.
+
+== כלל סכום ==
+/50,000 = 50000 | /106,200 = 106200 | /28,910 = 28910
+קו לפני ואחרי הסכום = קו הגנה בלבד. קרא רק את המספר עצמו.
+
+== כלל "למוטב בלבד" ==
+אם מודפס "למוטב בלבד" = non_negotiable: true
+
+ענה ב-JSON תקני בלבד:
+{
+  "bank_name": "שם בנק",
+  "branch_number": "סניף",
+  "account_number": "חשבון",
+  "cheque_number": "מספר שיק",
+  "drawer_name": "שם המושך מהפינה הימנית עליונה",
+  "drawer_id": "ח.פ מהפינה הימנית עליונה",
+  "drawer_address": "כתובת מושך",
+  "drawer_phone": "טלפון מושך",
+  "payee": "שם המוטב",
+  "amount_digits": "מספר בלבד",
+  "amount_words": "סכום במילים",
+  "date": "DD/MM/YYYY",
+  "has_stamp": true,
+  "has_signature": true,
+  "stamp_id": "ח.פ בחותמת",
+  "non_negotiable": false,
+  "is_computerized": false,
+  "two_pen_colors": false,
+  "corrections_visible": false,
+  "amount_match": true,
+  "image_quality": "good",
+  "unreadable_fields": [],
+  "observations": ""
+}`;
+}
+
+function renderBundle(results) {
+  let total = 0;
+  let approved = 0, pending = 0, rejected = 0;
+
+  const rows = results.map((r, i) => {
+    const d = r.data;
+    const v = r.validation;
+    const amt = parseFloat((d.amount_digits||'0').replace(/[,\s]/g,'')) || 0;
+    if (v.statusCode === 'APPROVED') { total += amt; approved++; }
+    else if (v.statusCode === 'PENDING') { total += amt; pending++; }
+    else rejected++;
+
+    const icons = {APPROVED:'✅', REJECTED:'🔴', PENDING:'⚠️'};
+    const amtFmt = amt ? '₪'+amt.toLocaleString('he-IL') : '?';
+
+    return `<div class="bundle-row" onclick="viewBundleItem(${i})">
+      <div class="br-top">
+        <div class="br-drawer">${d.drawer_name||'לא זוהה'}</div>
+        <div class="br-amount">${amtFmt}</div>
+      </div>
+      <div class="br-meta">
+        <span>ח.פ: ${d.drawer_id||'—'}</span>
+        <span>${d.date||'—'}</span>
+        <span>שיק: ${d.cheque_number||'—'}</span>
+      </div>
+      <div class="br-meta" style="margin-top:3px">
+        <span>לפקודת: ${d.payee||'—'}</span>
+      </div>
+      <div class="br-status">
+        <span>${icons[v.statusCode]}</span>
+        <span style="font-size:12px;color:var(--muted)">${v.verdict}</span>
+        ${v.issues.length ? '<span style="font-size:11px;color:var(--red)">'+v.issues[0].text+'</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bundleRows').innerHTML = rows;
+  document.getElementById('bundleTitle').textContent =
+    `📦 ${results.length} שיקים | ✅${approved} ⚠️${pending} 🔴${rejected}`;
+  document.getElementById('bundleTotal').textContent =
+    '₪'+total.toLocaleString('he-IL');
+  document.getElementById('bundleCard').classList.add('show');
+
+  setTimeout(() => document.getElementById('bundleCard').scrollIntoView({behavior:'smooth',block:'start'}), 100);
+}
+
+function viewBundleItem(i) {
+  currentResult = bundleResults[i];
+  setMode('single');
+  document.getElementById('previewWrap').classList.remove('show');
+  renderResult(currentResult);
+}
+
+function saveBundle() {
+  bundleResults.forEach(r => {
+    history.unshift(r);
+  });
+  if (history.length > 100) history = history.slice(0, 100);
+  localStorage.setItem('checkHistory', JSON.stringify(history));
+  renderHistory();
+  alert(`✅ ${bundleResults.length} שיקים נשמרו בהיסטוריה`);
 }
 
 // ─── VALIDATION ───
@@ -1257,6 +1699,63 @@ function showError(msg) {
 function hideError() {
   document.getElementById('errorBanner').classList.remove('show');
 }
+
+// ─── EDIT MODAL ───
+function openEditModal() {
+  if (!currentResult) return;
+  const d = currentResult.data;
+
+  document.getElementById('editPayee').value = d.payee || '';
+  document.getElementById('editAmount').value = d.amount_digits || '';
+  document.getElementById('editDate').value = d.date || '';
+  document.getElementById('editDrawer').value = d.drawer_name || '';
+
+  // Amount confidence
+  const amountConf = document.getElementById('amountConf');
+  const obs = (d.observations || '').toLowerCase();
+  if (obs.includes('50000') || obs.includes('קו')) {
+    amountConf.className = 'conf-low';
+    amountConf.textContent = '⚠️ זוהה קו הגנה — אמת סכום';
+  } else {
+    amountConf.className = 'conf-high';
+    amountConf.textContent = '✓ סכום נקרא בביטחון';
+  }
+
+  document.getElementById('editModal').classList.add('show');
+
+  // Auto-focus payee (most likely to need correction)
+  setTimeout(() => document.getElementById('editPayee').focus(), 300);
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('show');
+}
+
+function confirmAndSave() {
+  if (!currentResult) return;
+
+  // Apply manual corrections
+  currentResult.data.payee        = document.getElementById('editPayee').value.trim();
+  currentResult.data.amount_digits = document.getElementById('editAmount').value.trim().replace(/[,₪\s]/g,'');
+  currentResult.data.date          = document.getElementById('editDate').value.trim();
+  currentResult.data.drawer_name   = document.getElementById('editDrawer').value.trim();
+  currentResult.data.manually_verified = true;
+  currentResult.data.verified_at = new Date().toISOString();
+
+  closeEditModal();
+
+  // Re-render with corrected data
+  renderResult(currentResult);
+
+  // Save
+  saveToHistory();
+}
+
+// Close modal on backdrop click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+
 </script>
 </body>
 </html>
