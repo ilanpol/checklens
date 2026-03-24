@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CheckLens — ניתוח שטרות</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4f8;
+  --white: #ffffff;
+  --dark: #0d1b2a;
+  --dark2: #1b2d3e;
+  --text: #1a2332;
+  --muted: #7a8fa6;
+  --border: #dde5ee;
+  --green: #00a86b;
+  --green-bg: #e6f7f1;
+  --red: #e03131;
+  --red-bg: #ffeaea;
+  --amber: #e67700;
+  --amber-bg: #fff3e0;
+  --blue: #1971c2;
+  --blue-bg: #e8f0fb;
+  --gold: #c9922a;
+  --shadow: 0 2px 16px rgba(13,27,42,0.10);
+  --shadow-lg: 0 8px 32px rgba(13,27,42,0.15);
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Heebo', sans-serif;
+  --radius: 16px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--dark);
+  padding: 16px 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+.logo span { color: #4db8ff; }
+
+.api-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+.api-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #ff4d4d;
+}
+.api-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── MAIN CONTENT ── */
+.content {
+  padding: 20px 16px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── API KEY SETUP ── */
+.setup-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 2px dashed var(--border);
+}
+
+.setup-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--dark);
+}
+
+.setup-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.api-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.api-input:focus { border-color: var(--blue); }
+
+.btn-save {
+  padding: 10px 18px;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── UPLOAD AREA ── */
+.upload-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.upload-area {
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.upload-area:active { background: var(--bg); }
+
+.upload-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.upload-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+
+.upload-sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.upload-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+}
+
+.upload-btn {
+  padding: 14px;
+  background: var(--white);
+  border: none;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.upload-btn:active { background: var(--blue-bg); }
+
+/* hidden file inputs */
+#cameraInput, #galleryInput { display: none; }
+
+/* ── PREVIEW ── */
+.preview-wrap {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  display: none;
+}
+
+.preview-wrap.show { display: block; }
+
+#previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.preview-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+}
+
+.btn-analyze {
+  flex: 1;
+  padding: 14px;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-analyze:active { transform: scale(0.98); }
+.btn-analyze:disabled { opacity: 0.5; }
+
+.btn-clear {
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* ── LOADING ── */
+.loading-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  display: none;
+}
+
+.loading-card.show { display: block; }
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--dark);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: right;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.loading-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  transition: color 0.3s;
+}
+
+.loading-step.active { color: var(--dark); font-weight: 600; }
+.loading-step.done { color: var(--green); }
+
+.step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.loading-step.active .step-dot { background: var(--dark); animation: pulse 1s infinite; }
+.loading-step.done .step-dot { background: var(--green); }
+
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+
+/* ── RESULT CARD ── */
+.result-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: none;
+  animation: slideUp 0.4s ease;
+}
+
+.result-card.show { display: block; }
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Status header */
+.result-status {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.status-text { flex: 1; }
+.status-verdict {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.status-sub {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.status-green { background: var(--green-bg); color: var(--green); }
+.status-red   { background: var(--red-bg);   color: var(--red); }
+.status-amber { background: var(--amber-bg); color: var(--amber); }
+
+/* Data section */
+.result-section {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.data-cell {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.data-cell.wide {
+  grid-column: 1 / -1;
+}
+
+.data-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+
+.data-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark);
+  line-height: 1.3;
+}
+
+.data-value.mono {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.data-value.amount {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+/* Issues */
+.issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.issue-row.red    { background: var(--red-bg);   color: var(--red); }
+.issue-row.amber  { background: var(--amber-bg); color: var(--amber); }
+.issue-row.blue   { background: var(--blue-bg);  color: var(--blue); }
+
+.issue-icon { flex-shrink: 0; margin-top: 1px; }
+
+/* Validity badges */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-ok    { background: var(--green-bg); color: var(--green); }
+.badge-warn  { background: var(--amber-bg); color: var(--amber); }
+.badge-fail  { background: var(--red-bg);   color: var(--red); }
+
+/* Action buttons */
+.result-actions {
+  padding: 16px 20px;
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-action {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-action:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--dark);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--bg);
+  color: var(--dark);
+  border: 1.5px solid var(--border);
+}
+
+/* History section */
+.history-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.history-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.history-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.history-item {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-item:last-child { border-bottom: none; }
+.history-item:active { background: var(--bg); }
+
+.hist-status {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.hist-status.green { background: var(--green-bg); }
+.hist-status.red   { background: var(--red-bg); }
+.hist-status.amber { background: var(--amber-bg); }
+
+.hist-info { flex: 1; min-width: 0; }
+.hist-drawer {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hist-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hist-amount {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  white-space: nowrap;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  font-family: var(--sans);
+}
+
+.nav-icon { font-size: 22px; }
+.nav-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+.nav-item.active .nav-label { color: var(--dark); }
+.nav-item.active .nav-icon { filter: saturate(1); }
+
+/* ── ERROR ── */
+.error-banner {
+  background: var(--red-bg);
+  border: 1px solid #ffcdd2;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--red);
+  display: none;
+}
+
+.error-banner.show { display: block; }
+
+/* Pages */
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; gap: 16px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">Check<span>Lens</span></div>
+  <div class="api-indicator">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiStatus">לא מחובר</span>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- PAGE: SCAN -->
+  <div class="page active" id="pageScan">
+
+    <!-- API Setup -->
+    <div class="setup-card" id="setupCard">
+      <div class="setup-title">🔑 הגדרת מפתח API</div>
+      <div class="setup-sub">נדרש פעם אחת. המפתח נשמר בדפדפן שלך בלבד.</div>
+      <div class="input-row">
+        <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-ant-api03-...">
+        <button class="btn-save" onclick="saveApiKey()">שמור</button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Upload Card -->
+    <div class="upload-card" id="uploadCard">
+      <div class="upload-area" onclick="document.getElementById('galleryInput').click()">
+        <span class="upload-icon">📄</span>
+        <div class="upload-title">בדיקת שיק</div>
+        <div class="upload-sub">צלם או בחר תמונת שיק<br>CamScanner מומלץ לדיוק מירבי</div>
+      </div>
+      <div class="upload-actions">
+        <button class="upload-btn" onclick="document.getElementById('cameraInput').click()">
+          📷 צלם עכשיו
+        </button>
+        <button class="upload-btn" onclick="document.getElementById('galleryInput').click()">
+          🖼️ מהגלריה
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden inputs -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleImage(this)">
+    <input type="file" id="galleryInput" accept="image/*" onchange="handleImage(this)">
+
+    <!-- Preview -->
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" alt="תצוגה מקדימה">
+      <div class="preview-badge" id="previewBadge">מוכן לניתוח</div>
+      <div class="preview-actions">
+        <button class="btn-analyze" id="analyzeBtn" onclick="analyzeCheck()">
+          🔍 נתח שיק
+        </button>
+        <button class="btn-clear" onclick="clearImage()" title="נקה">✕</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-card" id="loadingCard">
+      <div class="spinner"></div>
+      <div class="loading-steps">
+        <div class="loading-step active" id="step1">
+          <div class="step-dot"></div>
+          <span>קורא נתוני שיק...</span>
+        </div>
+        <div class="loading-step" id="step2">
+          <div class="step-dot"></div>
+          <span>בודק תקינות שטר...</span>
+        </div>
+        <div class="loading-step" id="step3">
+          <div class="step-dot"></div>
+          <span>מאמת מדיניות...</span>
+        </div>
+        <div class="loading-step" id="step4">
+          <div class="step-dot"></div>
+          <span>מכין דוח...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+
+      <div class="result-status" id="resultStatus">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="result-section">
+        <div class="section-label">נתוני שיק</div>
+        <div class="data-grid" id="dataGrid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <div class="result-section" id="issuesSection">
+        <div class="section-label">ממצאים</div>
+        <div class="issue-list" id="issueList"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="section-label">בדיקות תקינות</div>
+        <div class="badges" id="badgesList"></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-action btn-primary" onclick="saveToHistory()">💾 שמור בהיסטוריה</button>
+        <button class="btn-action btn-secondary" onclick="clearImage()">🔄 שיק חדש</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- PAGE: HISTORY -->
+  <div class="page" id="pageHistory">
+    <div class="history-section">
+      <div class="history-header">
+        <div class="history-title">היסטוריית בדיקות</div>
+        <div class="history-count" id="historyCount">0 שיקים</div>
+      </div>
+      <div id="historyList">
+        <div class="empty-state">אין בדיקות שמורות עדיין</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="navScan" onclick="showPage('scan')">
+    <span class="nav-icon">📷</span>
+    <span class="nav-label">סריקה</span>
+  </button>
+  <button class="nav-item" id="navHistory" onclick="showPage('history')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">היסטוריה</span>
+  </button>
+</div>
+
+<script>
+// ─── STATE ───
+let currentImage = null;
+let currentResult = null;
+let history = JSON.parse(localStorage.getItem('checkHistory') || '[]');
+const TODAY = new Date();
+
+// ─── API KEY ───
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    showError('מפתח לא תקין — חייב להתחיל עם sk-ant-');
+    return;
+  }
+  localStorage.setItem('anthropicKey', key);
+  document.getElementById('setupCard').style.display = 'none';
+  updateApiStatus(true);
+}
+
+function getApiKey() {
+  return localStorage.getItem('anthropicKey') || '';
+}
+
+function updateApiStatus(connected) {
+  const dot = document.getElementById('apiDot');
+  const txt = document.getElementById('apiStatus');
+  if (connected) {
+    dot.className = 'api-dot connected';
+    txt.textContent = 'מחובר';
+  } else {
+    dot.className = 'api-dot';
+    txt.textContent = 'לא מחובר';
+  }
+}
+
+// ─── INIT ───
+window.addEventListener('load', () => {
+  const key = getApiKey();
+  if (key) {
+    document.getElementById('setupCard').style.display = 'none';
+    updateApiStatus(true);
+  }
+  renderHistory();
+});
+
+// ─── IMAGE HANDLING ───
+function handleImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentImage = e.target.result; // base64 data URL
+    document.getElementById('previewImg').src = currentImage;
+    document.getElementById('previewWrap').classList.add('show');
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('loadingCard').classList.remove('show');
+    hideError();
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function clearImage() {
+  currentImage = null;
+  currentResult = null;
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('loadingCard').classList.remove('show');
+  hideError();
+}
+
+// ─── ANALYSIS ───
+async function analyzeCheck() {
+  if (!currentImage) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    showError('יש להגדיר מפתח API תחילה');
+    return;
+  }
+
+  // Show loading
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('loadingCard').classList.add('show');
+  hideError();
+
+  // Animate steps
+  animateSteps();
+
+  try {
+    // Strip data URL prefix to get pure base64
+    const b64 = currentImage.split(',')[1];
+    const mediaType = currentImage.split(';')[0].split(':')[1];
+
+    const prompt = `אתה מומחה לבדיקת שטרות ישראליים לחברת ניכיון שיקים. ניתוח מדיניות: תאריך מקסימלי ${formatDate(new Date(TODAY.getTime() + 120*24*60*60*1000))}, בנקים לא מקובלים: בנק הדואר, זירו.
+
+נתח את השיק ב-JSON בלבד (ללא גדרות קוד):
+{
+  "bank_name": "שם הבנק",
+  "branch_number": "סניף",
+  "account_number": "חשבון",
+  "cheque_number": "מספר שיק",
+  "drawer_name": "שם המושך",
+  "drawer_id": "ח.פ או ת.ז",
+  "payee": "לפקודת",
+  "amount_digits": "סכום מספרי בלבד",
+  "amount_words": "סכום במילים",
+  "date": "DD/MM/YYYY",
+  "has_stamp": true/false,
+  "has_signature": true/false,
+  "stamp_id": "ח.פ בחותמת",
+  "non_negotiable": true/false,
+  "is_computerized": true/false,
+  "two_pen_colors": true/false,
+  "corrections_visible": true/false,
+  "amount_match": true/false,
+  "image_quality": "good/medium/poor",
+  "unreadable_fields": [],
+  "observations": "הערות"
+}
+חשוב: סכום שמתחיל ב- / — הקו הוא הגנה, הסכום הוא מה שאחריו. "למוטב בלבד" = non_negotiable: true.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': apiKey,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1200,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || `שגיאת API: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+
+    // Run validation
+    const validation = runValidation(parsed);
+    currentResult = { data: parsed, validation, timestamp: new Date().toISOString() };
+
+    // Show result
+    document.getElementById('loadingCard').classList.remove('show');
+    renderResult(currentResult);
+
+  } catch (err) {
+    document.getElementById('loadingCard').classList.remove('show');
+    document.getElementById('previewWrap').classList.add('show');
+    showError('שגיאה בניתוח: ' + err.message);
+  }
+}
+
+// ─── VALIDATION ───
+function runValidation(d) {
+  const issues = [], warnings = [], flags = [];
+  const rejectedBanks = ['בנק הדואר', 'הדואר', 'זירו', 'zero'];
+
+  // Bank
+  const bank = (d.bank_name || '').toLowerCase();
+  for (const rb of rejectedBanks) {
+    if (bank.includes(rb.toLowerCase())) {
+      issues.push({ text: `בנק לא מקובל: ${d.bank_name}`, severity: 'red' });
+      break;
+    }
+  }
+
+  // Non-negotiable
+  if (d.non_negotiable) {
+    issues.push({ text: 'שיק לא סחיר — "למוטב בלבד"', severity: 'red' });
+  }
+
+  // Date
+  const checkDate = parseDate(d.date);
+  if (!checkDate) {
+    issues.push({ text: `תאריך לא קריא: "${d.date}"`, severity: 'red' });
+  } else {
+    const diffDays = Math.round((checkDate - TODAY) / 86400000);
+    if (diffDays < 0) {
+      issues.push({ text: `תאריך עבר לפני ${Math.abs(diffDays)} ימים`, severity: 'red' });
+    } else if (diffDays > 120) {
+      issues.push({ text: `תאריך חורג מ-120 יום (${diffDays} ימים)`, severity: 'red' });
+    }
+    // Invalid calendar dates
+    const m = checkDate.getMonth()+1, day = checkDate.getDate();
+    const maxDays = {2:29, 4:30, 6:30, 9:30, 11:30};
+    if (maxDays[m] && day > maxDays[m]) {
+      issues.push({ text: `תאריך לא הגיוני: יום ${day} בחודש ${m}`, severity: 'red' });
+    }
+  }
+
+  // Amount match
+  if (d.amount_match === false) {
+    issues.push({ text: 'סכום ספרות ≠ סכום במילים', severity: 'red' });
+  }
+
+  // Company checks
+  const drawer = d.drawer_name || '';
+  const isCompany = /בע"מ|בעמ|שותפות|חברה/.test(drawer);
+  if (isCompany) {
+    if (!d.has_signature) issues.push({ text: 'חברה ללא חתימה', severity: 'red' });
+    if (!d.has_stamp)     issues.push({ text: 'חברה ללא חותמת', severity: 'red' });
+    if (d.drawer_id && d.stamp_id) {
+      const did = d.drawer_id.replace(/\D/g,'');
+      const sid = d.stamp_id.replace(/\D/g,'');
+      if (did && sid && did !== sid) {
+        issues.push({ text: `ח.פ. חותמת (${sid}) ≠ ח.פ. מודפס (${did})`, severity: 'red' });
+      }
+    }
+  }
+
+  // Warnings
+  if (d.two_pen_colors)        warnings.push({ text: 'שני צבעי עט — אמת עם המושך', severity: 'amber' });
+  if (d.corrections_visible)   warnings.push({ text: 'תיקונים נראים — בדוק חתימה', severity: 'amber' });
+  if (d.image_quality === 'poor') warnings.push({ text: 'איכות תמונה ירודה', severity: 'amber' });
+  if (d.unreadable_fields?.length) {
+    d.unreadable_fields.forEach(f => warnings.push({ text: `שדה לא קריא: ${f}`, severity: 'amber' }));
+  }
+  if (d.observations) flags.push({ text: d.observations, severity: 'blue' });
+
+  const allIssues = [...issues, ...warnings, ...flags];
+  let statusCode, verdict, statusClass;
+
+  if (issues.length > 0) {
+    statusCode = 'REJECTED';
+    verdict = 'שיק נדחה';
+    statusClass = 'status-red';
+  } else if (warnings.length > 0) {
+    statusCode = 'PENDING';
+    verdict = 'ממתין לאימות';
+    statusClass = 'status-amber';
+  } else {
+    statusCode = 'APPROVED';
+    verdict = 'שיק תקין';
+    statusClass = 'status-green';
+  }
+
+  return { statusCode, verdict, statusClass, issues: allIssues, checkDate };
+}
+
+// ─── RENDER RESULT ───
+function renderResult(r) {
+  const d = r.data;
+  const v = r.validation;
+
+  // Status header
+  const icons = { APPROVED: '✅', REJECTED: '🔴', PENDING: '⚠️' };
+  const subs  = { APPROVED: 'ניתן להמשיך לניתוח אשראי', REJECTED: 'דחה — בקש שיק חדש', PENDING: 'נדרש אימות לפני אישור' };
+
+  document.getElementById('resultStatus').innerHTML = `
+    <span class="status-icon">${icons[v.statusCode]}</span>
+    <div class="status-text">
+      <div class="status-verdict">${v.verdict}</div>
+      <div class="status-sub">${subs[v.statusCode]}</div>
+    </div>
+  `;
+  document.getElementById('resultStatus').className = `result-status ${v.statusClass}`;
+
+  // Data grid
+  const amount = d.amount_digits ? `₪${Number(d.amount_digits.replace(/,/g,'')).toLocaleString('he-IL')}` : '?';
+  document.getElementById('dataGrid').innerHTML = `
+    <div class="data-cell wide">
+      <div class="data-label">מושך</div>
+      <div class="data-value">${d.drawer_name || '—'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">ח.פ / ת.ז</div>
+      <div class="data-value mono">${d.drawer_id || '—'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">בנק / סניף</div>
+      <div class="data-value">${d.bank_name || '—'} ${d.branch_number ? '/'+d.branch_number : ''}</div>
+    </div>
+    <div class="data-cell wide">
+      <div class="data-label">סכום</div>
+      <div class="data-value amount">${amount}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">תאריך</div>
+      <div class="data-value mono">${d.date || '—'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-label">שיק מס׳</div>
+      <div class="data-value mono">${d.cheque_number || '—'}</div>
+    </div>
+    <div class="data-cell wide">
+      <div class="data-label">לפקודת</div>
+      <div class="data-value">${d.payee || '—'}</div>
+    </div>
+  `;
+
+  // Issues
+  const issSection = document.getElementById('issuesSection');
+  const issueList = document.getElementById('issueList');
+  if (v.issues.length === 0) {
+    issSection.style.display = 'none';
+  } else {
+    issSection.style.display = 'block';
+    issueList.innerHTML = v.issues.map(i => `
+      <div class="issue-row ${i.severity}">
+        <span class="issue-icon">${i.severity==='red'?'🔴':i.severity==='amber'?'⚠️':'💡'}</span>
+        <span>${i.text}</span>
+      </div>
+    `).join('');
+  }
+
+  // Badges
+  const checks = [
+    { label: 'חתימה', ok: d.has_signature },
+    { label: 'חותמת', ok: d.has_stamp },
+    { label: 'סחיר', ok: !d.non_negotiable },
+    { label: 'עט אחיד', ok: !d.two_pen_colors },
+    { label: 'ממוחשב', ok: d.is_computerized, neutral: true },
+  ];
+
+  document.getElementById('badgesList').innerHTML = checks.map(c => {
+    if (c.neutral && c.ok) return `<span class="badge badge-ok">${c.label} ✓</span>`;
+    if (c.neutral && !c.ok) return '';
+    return `<span class="badge ${c.ok?'badge-ok':'badge-fail'}">${c.label} ${c.ok?'✓':'✗'}</span>`;
+  }).join('');
+
+  document.getElementById('resultCard').classList.add('show');
+
+  // Scroll to result
+  setTimeout(() => document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+// ─── HISTORY ───
+function saveToHistory() {
+  if (!currentResult) return;
+  history.unshift(currentResult);
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('checkHistory', JSON.stringify(history));
+  renderHistory();
+  alert('✅ נשמר בהיסטוריה');
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  document.getElementById('historyCount').textContent = `${history.length} שיקים`;
+
+  if (history.length === 0) {
+    list.innerHTML = '<div class="empty-state">אין בדיקות שמורות עדיין</div>';
+    return;
+  }
+
+  list.innerHTML = history.map((r, i) => {
+    const d = r.data;
+    const v = r.validation;
+    const icons = { APPROVED: { icon: '✅', cls: 'green' }, REJECTED: { icon: '🔴', cls: 'red' }, PENDING: { icon: '⚠️', cls: 'amber' } };
+    const s = icons[v.statusCode] || icons.PENDING;
+    const amount = d.amount_digits ? `₪${Number(d.amount_digits.replace(/,/g,'')).toLocaleString('he-IL')}` : '?';
+    const date = new Date(r.timestamp).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit'});
+    return `
+      <div class="history-item" onclick="viewHistory(${i})">
+        <div class="hist-status ${s.cls}">${s.icon}</div>
+        <div class="hist-info">
+          <div class="hist-drawer">${d.drawer_name || 'לא ידוע'}</div>
+          <div class="hist-meta">${d.date || '—'} · נבדק ${date}</div>
+        </div>
+        <div class="hist-amount">${amount}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function viewHistory(i) {
+  currentResult = history[i];
+  showPage('scan');
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('loadingCard').classList.remove('show');
+  renderResult(currentResult);
+}
+
+// ─── NAVIGATION ───
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  if (name === 'scan') {
+    document.getElementById('pageScan').classList.add('active');
+    document.getElementById('navScan').classList.add('active');
+  } else {
+    document.getElementById('pageHistory').classList.add('active');
+    document.getElementById('navHistory').classList.add('active');
+    renderHistory();
+  }
+}
+
+// ─── LOADING ANIMATION ───
+let stepTimer;
+function animateSteps() {
+  const steps = ['step1','step2','step3','step4'];
+  let i = 0;
+  steps.forEach(s => {
+    document.getElementById(s).className = 'loading-step';
+  });
+  document.getElementById('step1').className = 'loading-step active';
+
+  stepTimer = setInterval(() => {
+    if (i < steps.length) {
+      if (i > 0) document.getElementById(steps[i-1]).className = 'loading-step done';
+      if (i < steps.length) document.getElementById(steps[i]).className = 'loading-step active';
+      i++;
+    } else {
+      clearInterval(stepTimer);
+      steps.forEach(s => document.getElementById(s).className = 'loading-step done');
+    }
+  }, 1800);
+}
+
+// ─── HELPERS ───
+function parseDate(str) {
+  if (!str) return null;
+  for (const fmt of [
+    str => { const [d,m,y] = str.split('/'); return new Date(+y<100?2000+ +y:+y,+m-1,+d); },
+    str => { const [d,m,y] = str.split('.'); return new Date(+y<100?2000+ +y:+y,+m-1,+d); },
+  ]) {
+    try { const d = fmt(str); if (!isNaN(d)) return d; } catch {}
+  }
+  return null;
+}
+
+function formatDate(d) {
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('errorBanner').classList.remove('show');
+}
+</script>
+</body>
+</html>
