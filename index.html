@@ -830,9 +830,12 @@ body {
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="logo">Check<span>Lens</span></div>
-  <div class="api-indicator">
-    <div class="api-dot" id="apiDot"></div>
-    <span id="apiStatus">לא מחובר</span>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+    <div class="api-indicator">
+      <div class="api-dot" id="apiDot"></div>
+      <span id="apiStatus">לא מחובר</span>
+    </div>
+    <div id="serverStatus" style="font-size:10px"></div>
   </div>
 </div>
 
@@ -848,6 +851,17 @@ body {
       <div class="input-row">
         <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-ant-api03-...">
         <button class="btn-save" onclick="saveApiKey()">שמור</button>
+      </div>
+    </div>
+
+
+    <!-- Server Setup Card -->
+    <div class="setup-card" id="serverSetupCard" style="border-color:#c3e6cb;background:#f8fff9">
+      <div class="setup-title">🔗 חיבור שרת מקומי (אופציונלי)</div>
+      <div class="setup-sub">לחיבור לדאטהבייס — הרץ api_server.py במחשב ורשום את כתובת ה-IP.</div>
+      <div class="input-row">
+        <input class="api-input" id="serverUrlInput" type="text" placeholder="http://192.168.1.x:5050">
+        <button class="btn-save" style="background:#00a86b" onclick="saveApiServer()">חבר</button>
       </div>
     </div>
 
@@ -928,6 +942,18 @@ body {
         <div class="data-grid" id="dataGrid">
           <!-- filled by JS -->
         </div>
+      </div>
+
+      <!-- DB Info -->
+      <div class="result-section" id="dbInfoSection" style="display:none">
+        <div class="section-label">📊 היסטוריה במערכת</div>
+        <div id="dbInfoContent"></div>
+      </div>
+
+      <!-- Customer Match -->
+      <div class="result-section" id="customerSection" style="display:none">
+        <div class="section-label">👤 זיהוי לקוח</div>
+        <div id="customerContent"></div>
       </div>
 
       <div class="result-section" id="issuesSection">
@@ -1030,8 +1056,57 @@ body {
 // ─── STATE ───
 let currentImage = null;
 let currentResult = null;
+let bundleResults = [];
 let history = JSON.parse(localStorage.getItem('checkHistory') || '[]');
 const TODAY = new Date();
+
+// ─── LOCAL API SERVER ───
+let API_BASE = localStorage.getItem('apiServer') || '';
+let apiServerConnected = false;
+
+async function checkApiServer() {
+  if (!API_BASE) return false;
+  try {
+    const r = await fetch(API_BASE + '/health', {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    apiServerConnected = d.status === 'ok';
+    const el = document.getElementById('serverStatus');
+    if (el) el.innerHTML = apiServerConnected
+      ? '<span style="color:#00a86b">&#128279; DB מחובר (' + d.drawers_loaded + ' מושכים)</span>'
+      : '<span style="color:#7a8fa6">&#128268; שרת לא זמין</span>';
+    return apiServerConnected;
+  } catch { apiServerConnected = false; return false; }
+}
+
+async function fetchDrawerInfo(hp) {
+  if (!apiServerConnected || !hp) return null;
+  try {
+    const r = await fetch(API_BASE + '/drawer/' + hp, {signal: AbortSignal.timeout(5000)});
+    return await r.json();
+  } catch { return null; }
+}
+
+async function findCustomer(name, hp) {
+  if (!apiServerConnected) return null;
+  try {
+    const r = await fetch(API_BASE + '/customer/find', {
+      method: 'POST', headers: {'content-type':'application/json'},
+      body: JSON.stringify({name:name, hp:hp}),
+      signal: AbortSignal.timeout(5000),
+    });
+    return await r.json();
+  } catch { return null; }
+}
+
+function saveApiServer() {
+  const url = document.getElementById('serverUrlInput').value.trim().replace(/\/$/,'');
+  if (!url) return;
+  localStorage.setItem('apiServer', url);
+  API_BASE = url;
+  document.getElementById('serverSetupCard').style.display = 'none';
+  checkApiServer();
+  setInterval(checkApiServer, 30000);
+}
 
 // ─── API KEY ───
 function saveApiKey() {
@@ -1067,6 +1142,13 @@ window.addEventListener('load', () => {
   if (key) {
     document.getElementById('setupCard').style.display = 'none';
     updateApiStatus(true);
+  }
+  // Check local API server
+  const srv = localStorage.getItem('apiServer');
+  if (srv) {
+    document.getElementById('serverSetupCard').style.display = 'none';
+    checkApiServer();
+    setInterval(checkApiServer, 30000);
   }
   renderHistory();
 });
@@ -1230,6 +1312,7 @@ async function analyzeCheck() {
     document.getElementById('loadingCard').classList.remove('show');
     document.getElementById('previewWrap').classList.add('show');
     renderResult(currentResult);
+    enrichFromDB(currentResult);
 
   } catch (err) {
     document.getElementById('loadingCard').classList.remove('show');
@@ -1703,6 +1786,69 @@ function showError(msg) {
 
 function hideError() {
   document.getElementById('errorBanner').classList.remove('show');
+}
+
+
+// ─── DB ENRICHMENT ───
+async function enrichFromDB(result) {
+  if (!result || !result.data) return;
+  const d = result.data;
+  const hp = (d.drawer_id || '').replace(/\D/g, '');
+  const payee = d.payee || '';
+
+  const [drawerInfo, customerInfo] = await Promise.all([
+    hp ? fetchDrawerInfo(hp) : Promise.resolve(null),
+    findCustomer(payee, hp),
+  ]);
+
+  if (drawerInfo && drawerInfo.found) {
+    const s = drawerInfo.stats || {};
+    const colors = {approve: '#00a86b', caution: '#e67700', stop: '#e03131'};
+    const col = colors[drawerInfo.recommendation] || '#7a8fa6';
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    html += '<div class="data-cell"><div class="data-label">חשיפה פתוחה</div><div class="data-value mono" style="color:#1971c2">&#8362;' + (s.open_obligo||0).toLocaleString('he-IL') + '</div></div>';
+    html += '<div class="data-cell"><div class="data-label">שיקים</div><div class="data-value mono">' + (s.check_count||0) + '</div></div>';
+    html += '<div class="data-cell"><div class="data-label">חזרות</div><div class="data-value mono" style="color:' + ((s.returns||0)>0?'#e03131':'#00a86b') + '">' + (s.returns||0) + '</div></div>';
+    html += '<div class="data-cell"><div class="data-label">המלצה</div><div class="data-value" style="color:' + col + ';font-weight:900">' + drawerInfo.rec_text + '</div></div>';
+    html += '</div>';
+    if (drawerInfo.history && drawerInfo.history.length > 0) {
+      html += '<div style="margin-top:10px;font-size:10px;font-weight:700;color:#7a8fa6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">שיקים אחרונים</div>';
+      drawerInfo.history.slice(0,4).forEach(function(h) {
+        html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #dde5ee;font-size:12px">';
+        html += '<span>' + h.date + '</span>';
+        html += '<span style="font-family:monospace">&#8362;' + (h.amount||0).toLocaleString('he-IL') + '</span>';
+        html += '<span style="color:' + (h.returned?'#e03131':'#00a86b') + '">' + (h.returned?'חזר':'&#10003; נפרע') + '</span>';
+        html += '</div>';
+      });
+    }
+    document.getElementById('dbInfoContent').innerHTML = html;
+    document.getElementById('dbInfoSection').style.display = 'block';
+  }
+
+  if (customerInfo) {
+    const isNew = customerInfo.is_new_customer || !customerInfo.found;
+    const c = customerInfo.customer || {};
+    const score = customerInfo.score || 0;
+    let html = '';
+    if (isNew) {
+      html = '<div style="background:#fff3e0;border-radius:10px;padding:12px 14px">';
+      html += '<div style="font-size:13px;font-weight:700;color:#e67700;margin-bottom:8px">&#x1F195; לקוח לא זוהה במערכת</div>';
+      html += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">';
+      html += '<input type="checkbox" id="newCustomerCheck" style="width:16px;height:16px">';
+      html += '<span>לקוח חדש — יש לפתוח תיק</span></label></div>';
+    } else {
+      const scoreCol = score >= 90 ? '#00a86b' : score >= 70 ? '#e67700' : '#e03131';
+      html = '<div style="background:#e6f7f1;border-radius:10px;padding:12px 14px">';
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px">';
+      html += '<div style="font-size:14px;font-weight:700">' + (c.name||'') + '</div>';
+      html += '<div style="font-size:11px;font-weight:700;color:' + scoreCol + '">התאמה: ' + score + '%</div></div>';
+      html += '<div style="font-size:11px;color:#7a8fa6">מסגרת: &#8362;' + (c.credit_limit||0).toLocaleString('he-IL') + ' &middot; דירוג: ' + (c.grade||'&#8212;') + '</div></div>';
+      html += '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#7a8fa6;margin-top:8px;cursor:pointer">';
+      html += '<input type="checkbox" id="newCustomerCheck"><span>זה לקוח חדש</span></label>';
+    }
+    document.getElementById('customerContent').innerHTML = html;
+    document.getElementById('customerSection').style.display = 'block';
+  }
 }
 
 // ─── EDIT MODAL ───
